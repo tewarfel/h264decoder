@@ -1,9 +1,9 @@
 extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavutil/avutil.h>
-#include <libavutil/imgutils.h>
-#include <libavutil/mem.h>
-#include <libswscale/swscale.h>
+  #include <libavcodec/avcodec.h>
+  #include <libavutil/avutil.h>
+  #include <libavutil/imgutils.h>
+  #include <libavutil/mem.h>
+  #include <libswscale/swscale.h>
 }
 
 #include <iostream>
@@ -38,7 +38,7 @@ H264Decoder::H264Decoder()
 //  context->pix_fmt = AV_PIX_FMT_YUV420P;
 //  context->color_range = AVCOL_RANGE_MPEG; 
 
-  printf("Declaring context for 1280x720 image, YUV420P\n");
+ // printf("Declaring context for 1280x720 image, YUV420P\n");
   int err = avcodec_open2(context, codec, nullptr);
   if (err < 0)
     throw H264InitFailure("cannot open context");
@@ -124,6 +124,9 @@ const AVFrame& ConverterRGB24::convert(const AVFrame &frame, ubyte* out_rgb)
   int w = frame.width;
   int h = frame.height;
 
+  //const int pict_type = frame.pict_type;
+  //const int key_frame = (((int)frame.flags & AV_FRAME_FLAG_KEY) != 0);
+  //printf("pict_type is %d, keyframe is %d\n", pict_type, key_frame);
   // TEW - added to fix the "deprecated format" error msg
   int pix_fmt = (frame.format != AV_PIX_FMT_YUVJ420P ? frame.format : AV_PIX_FMT_YUV420P);
   

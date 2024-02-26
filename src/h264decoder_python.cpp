@@ -9,6 +9,10 @@
 
 #include "h264decoder.hpp"
 
+extern "C" {
+#include <libavutil/frame.h>
+}
+
 namespace py = pybind11;
 
 using ubyte = unsigned char;
@@ -57,7 +61,7 @@ private:
 py::object create_named_tuple_return_type()
 {
   py::exec("import typing");
-  return py::eval("typing.NamedTuple('Frame',[ ('data' , bytes), ('width' , int), ('height' , int), ('rowsize' , int ) ])");
+  return py::eval("typing.NamedTuple('Frame',[ ('data' , bytes), ('width' , int), ('height' , int), ('rowsize' , int), ('pict_type', int), ('key_frame', int)])");
 }
 
 
@@ -67,7 +71,7 @@ class PyH264Decoder
   H264Decoder decoder;
   ConverterRGB24 converter;
 
-  py::object create_frame(py::bytes data, int w, int h, int rowsize);
+  py::object create_frame(py::bytes data, int w, int h, int rowsize, int frametype, int keyframe);
   /* Extract frames from input stream. Stops at frame boundaries and returns the number of consumed bytes
    * in num_consumed.
    * 
@@ -89,10 +93,10 @@ public:
 };
 
 
-py::object PyH264Decoder::create_frame(py::bytes data, int w, int h, int rowsize)
+py::object PyH264Decoder::create_frame(py::bytes data, int w, int h, int rowsize, int pict_type, int key_frame)
 {
   static auto frame_type = py::module::import("h264decoder").attr("Frame");
-  return frame_type(data, w, h, rowsize);
+  return frame_type(data, w, h, rowsize, pict_type, key_frame);
 }
 
 
@@ -118,15 +122,17 @@ py::tuple PyH264Decoder::decode_frame_impl(const ubyte *data_in, ssize_t len, ss
 
     // Copy the final frame into the buffer
     gilguard.unlock();
+    const int pict_type = (int)frame->pict_type;
+    const int key_frame = (((int)frame->flags & AV_FRAME_FLAG_KEY) != 0);
     const auto &rgbframe = converter.convert(*frame, (ubyte*)out_buffer);
     gilguard.lock();
 
-    return create_frame(py_out_str, w, h, row_size(rgbframe));
+    return create_frame(py_out_str, w, h, row_size(rgbframe), pict_type, key_frame);
   }
   else
   {
     gilguard.lock();
-    return create_frame(py::bytes(), 0, 0, 0);
+    return create_frame(py::bytes(), 0, 0, 0, 0, 0);
   }
 }
 
