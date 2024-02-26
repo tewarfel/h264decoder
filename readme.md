@@ -3,6 +3,10 @@ H264 Decoder Python Module
 
 ![Master branch status](https://github.com/DaWelter/h264decoder/actions/workflows/python-package.yml/badge.svg?branch=master)
 
+Note - this fork was modified by Tom Warfel to provide the following changes:
+ 1. support for FFMPEG v6+
+ 2. convert H264 frames into 24-bit BGR images rather than RGB images, to simplify work with OpenCV rather than PILlow/matplotlib
+
 The aim of this project is to provide a simple decoder for video
 captured by a Raspberry Pi camera. At the time of this writing I only
 need H264 decoding, since a H264 stream is what the RPi software 
@@ -26,14 +30,15 @@ while 1:
   if not data_in:
     break
   framedatas = decoder.decode(data_in)
-  for framedata in framedatas:
-    (frame, w, h, ls) = framedata
-    if frame is not None:
-        #print('frame size %i bytes, w %i, h %i, linesize %i' % (len(frame), w, h, ls))
-        frame = np.frombuffer(frame, dtype=np.ubyte, count=len(frame))
-        frame = frame.reshape((h, ls//3, 3))
-        frame = frame[:,:w,:]
-        # At this point `frame` references your usual height x width x rgb channels numpy array of unsigned bytes.
+  for [frame, width, height, rowsize] in framedatas:
+      image_oversize = np.frombuffer(frame, dtype=np.ubyte, count=len(frame)) 
+
+      # modified so returns as BGR
+      image = image_oversize.reshape((height, rowsize // 3, 3))
+      print("processing video frame at timestamp: ", presentation_time, " height: ", height, " width: ", width)
+
+      cv2.imshow("image", image)
+      cv2.waitKey(10)
 ```
 There are simple demo programs in the ```examples``` folder. ```display_frames.py``` is probably the one you want to take a look at.
 

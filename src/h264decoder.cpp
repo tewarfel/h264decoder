@@ -34,11 +34,11 @@ H264Decoder::H264Decoder()
   if (!context)
     throw H264InitFailure("cannot allocate context");
 
-  // Note: CODEC_CAP_TRUNCATED was prefixed with AV_...
-  if(codec->capabilities & AV_CODEC_CAP_TRUNCATED) {
-    context->flags |= AV_CODEC_FLAG_TRUNCATED;
-  }  
 
+//  context->pix_fmt = AV_PIX_FMT_YUV420P;
+//  context->color_range = AVCOL_RANGE_MPEG; 
+
+  printf("Declaring context for 1280x720 image, YUV420P\n");
   int err = avcodec_open2(context, codec, nullptr);
   if (err < 0)
     throw H264InitFailure("cannot open context");
@@ -110,6 +110,7 @@ ConverterRGB24::ConverterRGB24()
   context = nullptr;
 }
 
+
 ConverterRGB24::~ConverterRGB24()
 {
   sws_freeContext(context);
@@ -117,21 +118,41 @@ ConverterRGB24::~ConverterRGB24()
 }
 
 
+
 const AVFrame& ConverterRGB24::convert(const AVFrame &frame, ubyte* out_rgb)
 {
   int w = frame.width;
   int h = frame.height;
-  int pix_fmt = frame.format;
+
+  // TEW - added to fix the "deprecated format" error msg
+  int pix_fmt = (frame.format != AV_PIX_FMT_YUVJ420P ? frame.format : AV_PIX_FMT_YUV420P);
   
   context = sws_getCachedContext(context, 
                                  w, h, (AVPixelFormat)pix_fmt, 
-                                 w, h, AV_PIX_FMT_RGB24, SWS_BILINEAR,
+                                 w, h, AV_PIX_FMT_BGR24, SWS_BILINEAR,
                                  nullptr, nullptr, nullptr);
   if (!context)
     throw H264DecodeFailure("cannot allocate context");
   
-  // Setup framergb with out_rgb as external buffer. Also say that we want RGB24 output.
-  av_image_fill_arrays(framergb->data, framergb->linesize, out_rgb, AV_PIX_FMT_RGB24, w, h, 1);
+   // TEW - added to fix the "deprecated format" error msg
+  {
+    int *coefficients1;
+    int *coefficients2;
+    int full_range1;
+    int full_range2;
+    int brightness, contrast, saturation;
+
+    if ( sws_getColorspaceDetails( context, &coefficients1, &full_range1, &coefficients2, &full_range2,
+                                  &brightness, &contrast, &saturation ) != -1 ) {
+        full_range1 = AVCOL_RANGE_MPEG;
+        sws_setColorspaceDetails( context, coefficients1, full_range1, coefficients2, full_range2,
+                                  brightness, contrast, saturation );
+    }
+  }
+
+  // Setup framergb with out_rgb as external buffer. Also say that we want BGR24 output.
+  av_image_fill_arrays(framergb->data, framergb->linesize, out_rgb, AV_PIX_FMT_BGR24, w, h, 1);
+
   // Do the conversion.
   sws_scale(context, frame.data, frame.linesize, 0, h,
             framergb->data, framergb->linesize);
@@ -139,6 +160,7 @@ const AVFrame& ConverterRGB24::convert(const AVFrame &frame, ubyte* out_rgb)
   framergb->height = h;
   return *framergb;
 }
+
 
 /*
 Determine required size of framebuffer.
@@ -150,7 +172,7 @@ fill the buffer we should also use it to determine the required size.
 */
 int ConverterRGB24::predict_size(int w, int h)
 {
-  return av_image_fill_arrays(framergb->data, framergb->linesize, nullptr, AV_PIX_FMT_RGB24, w, h, 1);
+  return av_image_fill_arrays(framergb->data, framergb->linesize, nullptr, AV_PIX_FMT_BGR24, w, h, 1);
 }
 
 
@@ -159,6 +181,7 @@ std::pair<int, int> width_height(const AVFrame& f)
 {
   return std::make_pair(f.width, f.height);
 }
+
 
 int row_size(const AVFrame& f)
 {
