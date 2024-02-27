@@ -34,13 +34,10 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     #    set(FFMPEG_DIR "${HOME}\\vcpkg\\packages\\ffmpeg_x64-windows\\lib\\pkgconfig")
     #  message("check in ${FFMPEG_DIR}")
     find_package(FFMPEG REQUIRED  )
-    target_include_directories(main PRIVATE ${FFMPEG_INCLUDE_DIRS})
+
+    include_directories(${FFMPEG_INCLUDE_DIRS})
     message(STATUS, "FFMPEG_INCLUDE_DIRS are ${FFMPEG_INCLUDE_DIRS}")
-
-    target_link_directories(main PRIVATE ${FFMPEG_LIBRARY_DIRS})
     message(STATUS, "FFMPEG_LIBRARY_DIRS are ${FFMPEG_LIBRARY_DIRS}")
-
-    target_link_libraries(main PRIVATE ${FFMPEG_LIBRARIES})
     message(STATUS, "FFMPEG_LIBRARIES are ${FFMPEG_LIBRARIES}")
 
 
