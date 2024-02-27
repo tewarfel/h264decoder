@@ -9,6 +9,7 @@ set (BuildExamples False CACHE BOOL "Build the examples")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
 if (NOT WIN32)
+        message(STATUS, "Not Win32")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wpedantic -Wno-deprecated-declarations")
 endif()
 
@@ -22,15 +23,46 @@ endif()
 # find_package(FFMPEG REQUIRED swscale avutil avcodec)
 
 # So we do it more low level
-find_path( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h )
-find_library( AVCODEC_LIBRARY avcodec )
-find_path( AVUTIL_INCLUDE_DIR libavutil/avutil.h )
-find_library( AVUTIL_LIBRARY avutil )
-find_path( SWSCALE_INCLUDE_DIR libswscale/swscale.h )
-find_library( SWSCALE_LIBRARY swscale )
+message(STATUS, "CMAKE_SYSTEM is ${CMAKE_SYSTEM}")
+message(STATUS, "CMAKE_SYSTEM_NAME is ${CMAKE_SYSTEM_NAME}")
+message(STATUS, "CMAKE_HOST_SYSTEM_NAME is ${CMAKE_HOST_SYSTEM_NAME}")
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    find_package(FFMPEG REQUIRED)
+    target_include_directories(main PRIVATE ${FFMPEG_INCLUDE_DIRS})
+    message(STATUS, "FFMPEG_INCLUDE_DIRS are ${FFMPEG_INCLUDE_DIRS}")
 
+    target_link_directories(main PRIVATE ${FFMPEG_LIBRARY_DIRS})
+    message(STATUS, "FFMPEG_LIBRARY_DIRS are ${FFMPEG_LIBRARY_DIRS}")
+
+    target_link_libraries(main PRIVATE ${FFMPEG_LIBRARIES})
+    message(STATUS, "FFMPEG_LIBRARIES are ${FFMPEG_LIBRARIES}")
+
+
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+       # MacOS
+    find_path( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h )
+    find_library( AVCODEC_LIBRARY avcodec )
+    find_path( AVUTIL_INCLUDE_DIR libavutil/avutil.h )
+    find_library( AVUTIL_LIBRARY avutil )
+    find_path( SWSCALE_INCLUDE_DIR libswscale/swscale.h )
+    find_library( SWSCALE_LIBRARY swscale )
 set(FFMPEG_LIBRARIES ${AVCODEC_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY})
-set(FFMPEG_INCLUDE_DIR ${AVCODEC_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR})
+set(FFMPEG_INCLUDE_DIRS ${AVCODEC_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR})
+
+else ()
+    find_path( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h )
+    find_library( AVCODEC_LIBRARY avcodec )
+    find_path( AVUTIL_INCLUDE_DIR libavutil/avutil.h )
+    find_library( AVUTIL_LIBRARY avutil )
+    find_path( SWSCALE_INCLUDE_DIR libswscale/swscale.h )
+    find_library( SWSCALE_LIBRARY swscale )
+set(FFMPEG_LIBRARIES ${AVCODEC_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY})
+set(FFMPEG_INCLUDE_DIRS ${AVCODEC_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR})
+
+
+endif()	
+
+
 
 
 find_package(pybind11)
@@ -51,7 +83,7 @@ endif()
 add_library(h264decoderlib STATIC src/h264decoder.cpp src/h264decoder.hpp)
 target_sources(h264decoderlib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/h264decoder.hpp)
 target_link_libraries(h264decoderlib PUBLIC ${FFMPEG_LIBRARIES})
-target_include_directories(h264decoderlib PUBLIC ${FFMPEG_INCLUDE_DIR})
+target_include_directories(h264decoderlib PUBLIC ${FFMPEG_INCLUDE_DIRS})
 target_include_directories(h264decoderlib PUBLIC "src")
 
 pybind11_add_module(h264decoder src/h264decoder_python.cpp)
