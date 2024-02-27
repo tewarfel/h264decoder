@@ -22,6 +22,10 @@ mechanisms of boost::python.
 #include <utility>
 #include <memory>
 
+#if (_WIN32==1) || (_WIN64==1)
+#define ssize_t SSIZE_T
+#endif
+
 struct AVCodecContext;
 struct AVFrame;
 struct AVCodec;
