@@ -29,7 +29,9 @@ class CMakeBuild(build_ext):
         if self.cmake_args is None:
             self.cmake_args = []
         else:
-            self.cmake_args = shlex.split(self.cmake_args)
+            self.cmake_args = [self.cmake_args]
+            # NOTE the split removes all of the slashes in the path...
+            # self.cmake_args = shlex.split(self.cmake_args)
 
     def run(self):   
         try:
