@@ -29,7 +29,8 @@ class CMakeBuild(build_ext):
         if self.cmake_args is None:
             self.cmake_args = []
         else:
-            self.cmake_args = shlex.split(self.cmake_args)
+            print("self.cmake_args is ", self.cmake_args)
+            #self.cmake_args = shlex.split(self.cmake_args)
 
     def run(self):   
         try:
