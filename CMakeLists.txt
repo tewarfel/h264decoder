@@ -60,7 +60,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         string(COMPARE EQUAL "$ENV{VCPKG_TOOLCHAIN}" "" VCPKG_ENV_UNDEFINED)
 	if (VCPKG_ENV_UNDEFINED)
             # guess
-	    set(CMAKE_TOOLCHAIN_FILE "${HOME}/vcpkg/scripts/buildsystems/pkg.cmake") 
+	    set(CMAKE_TOOLCHAIN_FILE "${HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake") 
             if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
                 message(FATAL_ERROR "Cannot find CMake toolchain file, and VCPKG_TOOLCHAIN environment variable is not set.")
             endif()
