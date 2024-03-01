@@ -3,18 +3,32 @@ H264 Decoder Python Module
 
 ![Master branch status](https://github.com/DaWelter/h264decoder/actions/workflows/python-package.yml/badge.svg?branch=master)
 
-Note - this fork was modified by Tom Warfel to provide the following changes:
+Note - this fork was modified by Tom Warfel with assistance from Jonathon McCall to provide the following changes:
  1. support for FFMPEG v6+
  2. convert H264 frames into 24-bit BGR images rather than RGB images, to simplify work with OpenCV rather than PILlow/matplotlib
+ 3. Build on Windows 10/11, Darwin (MacOS), and Linux x86_64 (with plans for ARM64 as well)
 
-The aim of this project is to provide a simple decoder for video
-captured by a Raspberry Pi camera. At the time of this writing I only
-need H264 decoding, since a H264 stream is what the RPi software 
-delivers. Furthermore flexibility to incorporate the decoder in larger
-python programs in various ways is desirable.
+This project was originally intended to provide a simple decoder for Python3 scripts to 
+decode and display video from a Raspberry Pi camera in H264 format, and is built upon 
+the "pybind11" (python bindings for C libraries) tool, and the FFMPEG libraries + include files.
+.
+While the original code produced RGB decoded files, this version produces BGR decoded files for direct display by OpenCV.
 
-The code might also serve as example for libav and pybind11 usage.
-/blob/CI/CD-improvements/.github/workflows/python-package.yml
+In addition, decoder results now include the numeric frame-type (per libavutil/avutil.h enum AVPictureType.  
+Most receently legal values were:
+```python
+    AV_PICTURE_TYPE_NONE = 0  ///< Undefined
+    AV_PICTURE_TYPE_I  = 1    ///< Intra
+    AV_PICTURE_TYPE_P  = 2    ///< Predicted
+    AV_PICTURE_TYPE_B  = 3    ///< Bi-dir predicted
+    AV_PICTURE_TYPE_S  = 4    ///< S(GMC)-VOP MPEG-4
+    AV_PICTURE_TYPE_SI = 5    ///< Switching Intra
+    AV_PICTURE_TYPE_SP = 6    ///< Switching Predicted
+    AV_PICTURE_TYPE_BI = 7    ///< BI type
+```
+
+
+
 
 Examples
 --------
@@ -30,12 +44,22 @@ while 1:
   if not data_in:
     break
   framedatas = decoder.decode(data_in)
-  for [frame, width, height, rowsize] in framedatas:
+  for [frame, width, height, rowsize, pict_type, key_frame] in framedatas:
       image_oversize = np.frombuffer(frame, dtype=np.ubyte, count=len(frame)) 
 
-      # modified so returns as BGR
+      # decoded image now returns as BGR rather than RGB
       image = image_oversize.reshape((height, rowsize // 3, 3))
-      print("processing video frame at timestamp: ", presentation_time, " height: ", height, " width: ", width)
+      print("processing video frame at timestamp: ", presentation_time, " height: ", height, " width: ", width )
+      if pict_type == 1:
+          print("I-frame")
+      elif pict_type == 2:
+          print("P-frame")
+      elif pict_type = 3:
+          print("B-frame")
+      else:
+          print("need to add other cases for this video stream")
+      if key_frame == 1:
+          print("this image is a key-frame (self-contained and not reliant on previous frames)")
 
       cv2.imshow("image", image)
       cv2.waitKey(10)
@@ -50,15 +74,12 @@ Requirements
 * libav / ffmpeg (swscale, avutil and avcodec)
 * pybind11 (will be automatically downloaded from github if not found)
 
-For the example scripts
-
-* matplotlib
-* numpy
 
 I tested it on
 
-* Ubuntu 18, gcc 9, Anaconda environment with Python 3.7, Libav from Ubuntu repo.
-* Windows 10, Visual Studio Community 2017, Anaconda environment with Python 3.7, FFMPEG from vcpkg.
+* Ubuntu 22.04, gcc 11, FFMPEG 6.1.1 downloaded and built in WSL2 with Python 3.11 (from sudo apt-get install python3.11-dev)
+* Windows 11, Visual Studio Community 2022, with Python 3.12 for windows (from www.python.org/downloads/), and FFMPEG from vcpkg.
+
 
 Building and Installing
 -----------------------
@@ -75,10 +96,11 @@ We can build the extension module with setuptools almost normally. However cmake
 
 ```bash
 python setup.py build_ext --cmake-args="-DCMAKE_TOOLCHAIN_FILE=[path to vcpkg]/scripts/buildsystems/vcpkg.cmake"
-pip install -e .
+pip install .
 ```
 
-The ```-e``` option installs symlinks to the build directory. Useful for development. Leave it out otherwise.
+Do not use the ```-e``` option (which installs symlinks to the build directory) as it doesn't play nice with the 
+Windows filesystem.
 
 ----------------------------------------------
 
@@ -110,6 +132,7 @@ in the project directory.
 
 History
 -------
+current - modified for BGR output, and to identify key-frames and picture types
 
 ### v2
 

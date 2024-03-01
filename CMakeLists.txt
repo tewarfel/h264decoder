@@ -1,7 +1,30 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 project(h264decoder)
 
-set(CMAKE_BUILD_TYPE Debug)
+
+
+#change default build type to Release (for speed) rather than Debug
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+            "Define build type, options are: Debug Release RelWithDebInfo MinSizeRel" FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
+
+
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(CXX_OPTIMIZATION_FLAG "-O0 -g")
+else()
+    set(CXX_OPTIMIZATION_FLAG "-O3")
+endif()
+
+# set defaults CPP flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format -fomit-frame-pointer -fstrict-aliasing")
+
+# minor optimizations on x64 for GCC variants
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -malign-double -fprefetch-loop-arrays")
+endif(CMAKE_COMPILER_IS_GNUCXX)
+
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 set (BuildExamples False CACHE BOOL "Build the examples")
@@ -32,10 +55,33 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     message(STATUS, "NEWPATH IS ${NEWPATH}")
     set(HOME "$ENV{HOMEDRIVE}${NEWPATH}")
     message(STATUS, "HOME IS ${HOME}")
+    string(COMPARE EQUAL "${CMAKE_TOOLCHAIN_FILE}" "" TOOLCHAIN_UNDEFINED)
+    if (TOOLCHAIN_UNDEFINED)
+        string(COMPARE EQUAL "$ENV{VCPKG_TOOLCHAIN}" "" VCPKG_ENV_UNDEFINED)
+	if (VCPKG_ENV_UNDEFINED)
+            # guess
+	    set(CMAKE_TOOLCHAIN_FILE "${HOME}/vcpkg/scripts/buildsystems/pkg.cmake") 
+            if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
+                message(FATAL_ERROR "Cannot find CMake toolchain file, and VCPKG_TOOLCHAIN environment variable is not set.")
+            endif()
+	else()
+            set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_TOOLCHAIN}")
+            if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
+		    message(FATAL_ERROR "VCPKG_TOOLCHAIN environment variable is defined as $ENV{VCPKG_TOOLCHAIN}, but I cannot find a file there.")
+            endif()
+        endif()
+    else()
+        if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
+		message(FATAL_ERROR "CMAKE_TOOLCHAIN_FILE is defined as ${CMAKE_TOOLCHAIN_FILE}, but I cannot find a file there.")
+        endif()
+    endif()
+
+
     #set(FFMPEG_DIR "${HOME}\\vcpkg\\packages\\ffmpeg_x64-windows\\share\\ffmpeg")
     #set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${HOME}\\vcpkg\\packages")
     #set(CMAKE_MODULE_PATH "${HOME}/vcpkg/packages/ffmpeg_x64-windows/share/ffmpeg")
-    #    set(FFMPEG_DIR "${HOME}\\vcpkg\\packages\\ffmpeg_x64-windows\\lib\\pkgconfig")
+
+    set(FFMPEG_DIR "${HOME}/vcpkg/packages/ffmpeg_x64-windows/lib/pkgconfig")
     message("check in ${CMAKE_MODULE_PATH}")
     #  message("check in ${FFMPEG_DIR}")
     # must include the toolchain file now, to get the find_package to work.
