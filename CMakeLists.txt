@@ -16,8 +16,10 @@ else()
     set(CXX_OPTIMIZATION_FLAG "-O3")
 endif()
 
-# set defaults CPP flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format -fomit-frame-pointer -fstrict-aliasing")
+if (NOT WIN32)
+  # set defaults CPP flags
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format -fomit-frame-pointer -fstrict-aliasing")
+endif()
 
 # minor optimizations on x64 for GCC variants
 if (CMAKE_COMPILER_IS_GNUCXX)
